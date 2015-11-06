@@ -48,7 +48,6 @@ public class DataBaseConfigTest {
 
     @After
     public void tearDown() {
-        db.shutdown();
     }
 
     class User {

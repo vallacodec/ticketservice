@@ -11,19 +11,19 @@ import org.springframework.util.SocketUtils;
 @ComponentScan("com.tm")
 public class SampleJerseyApplication extends SpringBootServletInitializer {
 
-	@Bean
-	public int port() {
-		return SocketUtils.findAvailableTcpPort();
-	}
+    @Bean
+    public int port() {
+        return SocketUtils.findAvailableTcpPort();
+    }
 
-	@Override
-	protected SpringApplicationBuilder configure(SpringApplicationBuilder application) {
-		return application.sources(SampleJerseyApplication.class);
-	}
+    @Override
+    protected SpringApplicationBuilder configure(SpringApplicationBuilder application) {
+        return application.sources(SampleJerseyApplication.class);
+    }
 
-	public static void main(String[] args) {
-		new SampleJerseyApplication().configure(
-				new SpringApplicationBuilder(SampleJerseyApplication.class)).run(args);
-	}
+    public static void main(String[] args) {
+        new SampleJerseyApplication().configure(
+                new SpringApplicationBuilder(SampleJerseyApplication.class)).run(args);
+    }
 
 }
