@@ -4,6 +4,7 @@ import com.tm.config.DataBaseConfig;
 import com.tm.config.RepositoryConfiguration;
 import com.tm.model.Seat;
 import com.tm.model.SeatHold;
+import com.tm.model.SeatStatus;
 import org.hibernate.SessionFactory;
 import org.junit.After;
 import org.junit.Assert;
@@ -15,8 +16,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.SpringApplicationConfiguration;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import javax.sql.DataSource;
@@ -90,7 +89,7 @@ public class TicketServiceRepositoryTest {
         Seat seat = new Seat();
         seat.setSeatNo(1);
         ticketServiceRepository.updateSeatDetailsForHold(seat, 1);
-        int updated = ticketServiceRepository.updateSeatForAvailable(1);
+        int updated = ticketServiceRepository.updateSeatForAvailableOrReserved(1, SeatStatus.AVAILABLE);
         Assert.assertEquals("Updated seat count",1,updated);
 
 

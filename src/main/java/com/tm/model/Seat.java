@@ -19,6 +19,8 @@ public class Seat {
 
     private String emailId;
 
+    private Integer seatHoldId;
+
     private Date seatHoldTime;
 
 }

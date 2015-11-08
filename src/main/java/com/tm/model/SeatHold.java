@@ -25,11 +25,13 @@ public class SeatHold {
     /**
      * This method holds the seat
      */
-    public void holdSeat(List<Seat> seats) {
-        for (Seat seat : seats) {
-            seat.setStatus(SeatStatus.HOLD);
-            seat.setSeatHoldTime(new Date());
-        }
+    public Seat holdSeat(com.tm.persistence.Seat seatPersistence) {
+        Seat seat = new Seat();
+        seat.setSeatNo(seatPersistence.getSeatNo());
+        seat.setSeatHoldId(seatPersistence.getSeatHoldId());
+        seat.setStatus(SeatStatus.HOLD);
+        seat.setSeatHoldTime(new Date());
+        return seat;
     }
 
     public void unHoldSeat(Seat seat) {

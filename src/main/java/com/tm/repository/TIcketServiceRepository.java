@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -35,12 +36,19 @@ public class TicketServiceRepository {
 
     private static String DELETE_SEAT_HOLD_DATA = "Delete SeatHold where seatHoldId =:seatHoldId";
 
+    private static String GET_SEAT_HOLD_TIME = "from SeatHold where seatHoldId =:seatHoldId";
+
     @Autowired
-    public TicketServiceRepository(@Qualifier("sessionFactory")SessionFactory sessionFactory){
+    public TicketServiceRepository(@Qualifier("sessionFactory") SessionFactory sessionFactory) {
         this.sessionFactory = sessionFactory;
     }
 
-
+    /**
+     * method to insert the seat hold data into the SEAT_HOLD table
+     *
+     * @param seatHold
+     * @return
+     */
     @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.DEFAULT)
     public Integer insertSeatHoldData(SeatHold seatHold) {
         com.tm.persistence.SeatHold seatHoldPersistence = new com.tm.persistence.SeatHold();
@@ -53,6 +61,12 @@ public class TicketServiceRepository {
         return seatHoldId;
     }
 
+    /**
+     * method to update the seat hold details in the SEAT table
+     *
+     * @param seat
+     * @param seatHoldId
+     */
     @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.DEFAULT)
     public void updateSeatDetailsForHold(Seat seat, Integer seatHoldId) {
         Session session = sessionFactory.openSession();
@@ -64,18 +78,34 @@ public class TicketServiceRepository {
         session.close();
     }
 
-
+    /**
+     * method to update the seat status to RESERVED or AVAILABLE in the seat table
+     *
+     * @param seatHoldId
+     * @param action
+     * @return
+     */
     @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.DEFAULT)
-    public Integer updateSeatForAvailable(Integer seatHoldId) {
+    public Integer updateSeatForAvailableOrReserved(Integer seatHoldId, SeatStatus action) {
         Session session = sessionFactory.openSession();
         Query query = session.createQuery(UPDATE_SEAT_DATA);
         query.setInteger("seatHoldId", seatHoldId);
-        query.setInteger("seatStatus", SeatStatus.AVAILABLE.getStatusId());
+        if (action.equals(SeatStatus.AVAILABLE)) {
+            query.setInteger("seatStatus", SeatStatus.AVAILABLE.getStatusId());
+        } else if (action.equals(SeatStatus.RESERVED)) {
+            query.setInteger("seatStatus", SeatStatus.AVAILABLE.getStatusId());
+        }
         int updated = query.executeUpdate();
         session.close();
         return updated;
     }
 
+    /**
+     * delete the seat hold record in the seat_hold table
+     *
+     * @param seatHoldId
+     * @return
+     */
     @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.DEFAULT)
     public int deleteSeatHold(Integer seatHoldId) {
         Session session = sessionFactory.openSession();
@@ -86,6 +116,12 @@ public class TicketServiceRepository {
         return deleteCount;
     }
 
+    /**
+     * To fetch the seat details based on the level id
+     *
+     * @param levelId
+     * @return
+     */
     @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.DEFAULT)
     public List<com.tm.persistence.Seat> getSeatDetails(Optional<Integer> levelId) {
         Session session = sessionFactory.openSession();
@@ -98,8 +134,24 @@ public class TicketServiceRepository {
         }
 
         List<com.tm.persistence.Seat> results = query.list();
+        List<Seat> seats = new ArrayList<>();
         session.close();
         return results;
+    }
+
+    /**
+     * To get seat hold time from the seat_hold table
+     *
+     * @param seatHoldId
+     * @return
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.DEFAULT)
+    public Date getSeatHoldTime(int seatHoldId) {
+        Date seatHoldTime = null;
+        Session session = sessionFactory.openSession();
+        Query query = session.createQuery(GET_SEAT_HOLD_TIME);
+        List<com.tm.persistence.SeatHold> results = query.list();
+        return results.get(0).getSeatHoldTime();
     }
 
 }

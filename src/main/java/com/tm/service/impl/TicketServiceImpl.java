@@ -7,6 +7,7 @@ import com.tm.model.SeatStatus;
 import com.tm.persistence.Seat;
 import com.tm.repository.LevelRepository;
 import com.tm.repository.TicketRepository;
+import com.tm.repository.TicketServiceRepository;
 import com.tm.service.TicketService;
 import org.hibernate.Query;
 import org.hibernate.Session;
@@ -27,45 +28,23 @@ import java.util.Optional;
 @EnableTransactionManagement
 public class TicketServiceImpl implements TicketService {
 
-    private TicketRepository ticketRepository;
 
-    private LevelRepository levelRepository;
+    private TicketServiceRepository ticketServiceRepository;
 
-    @Autowired
-    private SessionFactory sessionFactory;
+    private static final int HOLD_TIME = 2 * 60 * 1000;
 
-    private static String QUERY_WITH_LEVEL_ID = "from Seat where levelId = :levelId and status = 2  ";
+    private static final String SUCCESS = "SUCCESS";
 
-    private static String QUERY_WITHOUT_LEVEL_ID = "from Seat where status = 2";
+    private static final String HOLD_TIME_OUT = "hold time out";
 
-    private static String FIND_AVAILABLE_SEATS = "from Seat where levelId= :levelId";
-
-
-    @Autowired
-    public void setTicketRepository(TicketRepository ticketRepository) {
-        this.ticketRepository = ticketRepository;
-    }
-
-    @Autowired
-    public void setLevelRepository(LevelRepository levelRepository) {
-        this.levelRepository = levelRepository;
-    }
 
     /**
      * @param venueLevel a numeric venue level identifier to limit the search
      * @return
      */
     public int numSeatsAvailable(Optional<Integer> venueLevel) {
-        Session session = sessionFactory.openSession();
-        Query query = null;
-        if (venueLevel.isPresent()) {
-            query = session.createQuery(QUERY_WITH_LEVEL_ID);
-        } else {
-            query = session.createQuery(QUERY_WITHOUT_LEVEL_ID);
-        }
-        query.setParameter("levelId", venueLevel);
-        List<Seat> results = query.list();
-        return results.size();
+        List<Seat> seats = ticketServiceRepository.getSeatDetails(venueLevel);
+        return seats.size();
     }
 
     /**
@@ -82,19 +61,19 @@ public class TicketServiceImpl implements TicketService {
      */
     public SeatHold findAndHoldSeats(int numSeats, Optional<Integer> minLevel, Optional<Integer> maxLevel, String customerEmail) {
         Integer levelInteger = seatAvailableLevel(numSeats, minLevel, maxLevel);
-        Session session = sessionFactory.openSession();
-        Query query = session.createQuery(QUERY_WITH_LEVEL_ID);
-        query.setParameter("levelId", levelInteger);
-        List<Seat> results = query.list();
+        List<Seat> seats = ticketServiceRepository.getSeatDetails(Optional.of(levelInteger));
+        List<com.tm.model.Seat> seatHolds = new ArrayList<>();
         //hold seats
-
         SeatHold seatHold = new SeatHold();
-        List<com.tm.model.Seat> seats = new ArrayList<>();
-        seatHold.holdSeat(seats);
-        //insert into seatHold table
-        //update in the Seat table
-        seatHold.setSeats(seats);
-
+        seatHold.setSeatHoldTime(new Date());
+        int seatHoldId = ticketServiceRepository.insertSeatHoldData(seatHold);
+        for (int i = 0; i < numSeats; i++) {
+            com.tm.model.Seat seat = seatHold.holdSeat(seats.get(i));
+            ticketServiceRepository.updateSeatDetailsForHold(seat, seatHoldId);
+            seatHolds.add(seat);
+        }
+        seatHold.setSeatHoldId(seatHoldId);
+        seatHold.setSeats(seatHolds);
         return seatHold;
     }
 
@@ -105,15 +84,56 @@ public class TicketServiceImpl implements TicketService {
      * @return
      */
     public String reserveSeats(int seatHoldId, String customerEmail) {
-        return null;
+        String reserved = "";
+        Date date = ticketServiceRepository.getSeatHoldTime(seatHoldId);
+        if (date.getTime() > HOLD_TIME) {
+            ticketServiceRepository.deleteSeatHold(seatHoldId);
+            ticketServiceRepository.updateSeatForAvailableOrReserved(seatHoldId, SeatStatus.AVAILABLE);
+            reserved = HOLD_TIME_OUT;
+        } else {
+            ticketServiceRepository.updateSeatForAvailableOrReserved(seatHoldId, SeatStatus.RESERVED);
+            ticketServiceRepository.deleteSeatHold(seatHoldId);
+            reserved = SUCCESS;
+        }
+        return reserved;
     }
 
-
+    /**
+     * If minimum level is not present, it assumes to be 1
+     * if maximum level is not present then this method assumes the minLevel is maxLevel
+     * This method returns the first available level for the no of seats
+     *
+     * @param numSeats
+     * @param minLevel
+     * @param maxLevel
+     * @return
+     */
     private int seatAvailableLevel(int numSeats, Optional<Integer> minLevel, Optional<Integer> maxLevel) {
-        Integer availableLevel = null;
-        for (int i = 1; i < maxLevel.get(); i++) {
+        int availableLevel = 0;
+        if (minLevel.isPresent() && maxLevel.isPresent()) {
+            availableLevel = findLevelAvailable(numSeats, minLevel.get(), maxLevel.get());
+        } else if (minLevel.isPresent()) {
+            availableLevel = findLevelAvailable(numSeats, 1, minLevel.get());
+        } else if (maxLevel.isPresent()) {
+            availableLevel = findLevelAvailable(numSeats, 1, maxLevel.get());
+        }
+        return availableLevel;
+    }
+
+    /**
+     * This method find the available level based on the seat count, min and max level input
+     *
+     * @param numSeats
+     * @param minValue
+     * @param maxValue
+     * @return
+     */
+    private int findLevelAvailable(int numSeats, int minValue, int maxValue) {
+        int availableLevel = 0;
+        for (int i = minValue; i < maxValue; i++) {
             if (numSeats >= numSeatsAvailable(Optional.of(i))) {
-                availableLevel = i;
+                availableLevel = availableLevel + 1;
+                break;
             }
         }
         return availableLevel;
