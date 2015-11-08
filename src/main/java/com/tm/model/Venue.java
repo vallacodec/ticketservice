@@ -1,19 +1,15 @@
 package com.tm.model;
 
+import lombok.Data;
+
 import java.util.List;
 
 /**
  * Created by svallaban1 on 11/3/2015.
  */
+@Data
 public class Venue {
 
-    private List<Level> levels;
+    private List<Seat> Seats;
 
-    public List<Level> getLevels() {
-        return levels;
-    }
-
-    public void setLevels(List<Level> levels) {
-        this.levels = levels;
-    }
 }

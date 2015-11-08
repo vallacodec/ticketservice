@@ -1,27 +1,24 @@
 package com.tm.model;
 
+import lombok.Data;
+
+import java.util.Date;
+
 /**
  * Created by svallaban1 on 11/3/2015.
+ * This class holds the information about the seats in the venue
  */
+@Data
 public class Seat {
 
-    private String seatNo;
+    private Integer seatNo;
 
-    private Status status;
+    private SeatStatus status;
 
-    public String getSeatNo() {
-        return seatNo;
-    }
+    private Level level;
 
-    public void setSeatNo(String seatNo) {
-        this.seatNo = seatNo;
-    }
+    private String emailId;
 
-    public Status getStatus() {
-        return status;
-    }
+    private Date seatHoldTime;
 
-    public void setStatus(Status status) {
-        this.status = status;
-    }
 }

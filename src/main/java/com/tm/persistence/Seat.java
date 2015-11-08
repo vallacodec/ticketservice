@@ -21,9 +21,10 @@ public class Seat {
 
     public String userId;
 
-    @ManyToOne
-    @JoinColumn(name="levelId")
-    public Level level;
+    public Integer levelId;
 
+    public Integer seatHoldId;
+
+    public String customerEmailId;
 
 }

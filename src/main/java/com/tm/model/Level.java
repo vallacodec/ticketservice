@@ -1,49 +1,21 @@
 package com.tm.model;
 
-import java.util.List;
+import lombok.Data;
 
 /**
  * Created by svallaban1 on 11/3/2015.
+ * This model holds the level details which includes the levelName, total no of seats in that level
+ * and the cost of that level
  */
+@Data
 public class Level {
-
-    private List<Seat> seats;
 
     private LevelEnum levelEnum;
 
+    private int totalNoOfSeats;
+
+    private String cost;
+
     private int availableSeats;
 
-    private String prize;
-
-    public String getPrize() {
-        return prize;
-    }
-
-    public void setPrize(String prize) {
-        this.prize = prize;
-    }
-
-    public List<Seat> getSeats() {
-        return seats;
-    }
-
-    public void setSeats(List<Seat> seats) {
-        this.seats = seats;
-    }
-
-    public LevelEnum getLevelEnum() {
-        return levelEnum;
-    }
-
-    public void setLevelEnum(LevelEnum levelEnum) {
-        this.levelEnum = levelEnum;
-    }
-
-    public int getAvailableSeats() {
-        return availableSeats;
-    }
-
-    public void setAvailableSeats(int avialableSeats) {
-        this.availableSeats = avialableSeats;
-    }
 }

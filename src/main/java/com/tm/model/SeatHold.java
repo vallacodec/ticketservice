@@ -1,27 +1,40 @@
 package com.tm.model;
 
+
+import lombok.Data;
+
+import java.util.Date;
+import java.util.List;
+
 /**
  * Created by svallaban1 on 11/3/2015.
  */
-public class SeatHold extends Seat {
+@Data
+public class SeatHold {
 
-    public boolean hold;
+    public static long SEAT_HOLD_DURATION = 5 * 60 * 1000;
+
+    private Integer seatHoldId;
+
+    private List<Seat> seats;
+
+    private Date seatHoldTime;
+
+    private String customerEmailId;
 
     /**
      * This method holds the seat
      */
-    public void holdSeat() {
-        String seatNo = this.getSeatNo();
-        this.setStatus(Status.HOLD);
-        this.setHold(true);
-        //call the db or service to hold the seat
+    public void holdSeat(List<Seat> seats) {
+        for (Seat seat : seats) {
+            seat.setStatus(SeatStatus.HOLD);
+            seat.setSeatHoldTime(new Date());
+        }
     }
 
-    public boolean isHold() {
-        return hold;
+    public void unHoldSeat(Seat seat) {
+        seat.setStatus(SeatStatus.AVAILABLE);
+        seat.setSeatHoldTime(null);
     }
 
-    public void setHold(boolean hold) {
-        this.hold = hold;
-    }
 }

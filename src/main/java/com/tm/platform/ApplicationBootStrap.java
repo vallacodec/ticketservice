@@ -9,7 +9,7 @@ import org.springframework.util.SocketUtils;
 
 @SpringBootApplication
 @ComponentScan("com.tm")
-public class SampleJerseyApplication extends SpringBootServletInitializer {
+public class ApplicationBootStrap extends SpringBootServletInitializer {
 
     @Bean
     public int port() {
@@ -18,12 +18,12 @@ public class SampleJerseyApplication extends SpringBootServletInitializer {
 
     @Override
     protected SpringApplicationBuilder configure(SpringApplicationBuilder application) {
-        return application.sources(SampleJerseyApplication.class);
+        return application.sources(ApplicationBootStrap.class);
     }
 
     public static void main(String[] args) {
-        new SampleJerseyApplication().configure(
-                new SpringApplicationBuilder(SampleJerseyApplication.class)).run(args);
+        new ApplicationBootStrap().configure(
+                new SpringApplicationBuilder(ApplicationBootStrap.class)).run(args);
     }
 
 }

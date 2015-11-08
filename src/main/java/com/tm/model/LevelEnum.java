@@ -2,10 +2,14 @@ package com.tm.model;
 
 /**
  * Created by svallaban1 on 11/3/2015.
+ * This enum represent the levelId and corresponding stage name
  */
 public enum LevelEnum {
 
-    BALCONY1(1);
+    ORCHESTRA(1),
+    MAIN(2),
+    BALCONY1(3),
+    BALCONY2(4);
 
     private Integer levelId;
 
