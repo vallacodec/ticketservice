@@ -1,5 +1,6 @@
 package com.tm.repository;
 
+import com.tm.config.DataBaseConfig;
 import com.tm.config.RepositoryConfiguration;
 import com.tm.persistence.Level;
 import com.tm.persistence.Seat;
@@ -25,7 +26,8 @@ import java.util.List;
  * Created by svallaban1 on 11/6/2015.
  */
 @RunWith(SpringJUnit4ClassRunner.class)
-@SpringApplicationConfiguration(classes = {RepositoryConfiguration.class})
+@SpringApplicationConfiguration(classes = {RepositoryConfiguration.class,
+        DataBaseConfig.class})
 public class TicketRepositoryTest {
 
     public Logger log = LoggerFactory.getLogger(TicketRepositoryTest.class);
@@ -51,12 +53,10 @@ public class TicketRepositoryTest {
     public void setUp() throws Exception {
         Level level = new Level();
         level.setLevelId(1);
-        level.setLevelStatus("1");
         level.setNoOfSeats(25);
         Seat seat = new Seat();
         seat.setSeatNo(2);
         seat.setSeatStatus(1);
-        seat.setUserId("sample@gmail.com");
         seat.setLevelId(1);
         levelRepository.save(level);
         ticketRepository.save(seat);
@@ -74,7 +74,7 @@ public class TicketRepositoryTest {
         Query query = session.createQuery("from Seat where levelId = :levelId");
         query.setParameter("levelId", 1);
         List<Seat> results = query.list();
-        results.forEach(s -> Assert.assertEquals(2, s.getSeatNo().intValue()));
+        results.forEach(s -> Assert.assertNotNull(s));
         Level level = levelRepository.findOne(1);
 
     }

@@ -19,8 +19,6 @@ public class Seat {
 
     public Integer seatStatus;
 
-    public String userId;
-
     public Integer levelId;
 
     public Integer seatHoldId;

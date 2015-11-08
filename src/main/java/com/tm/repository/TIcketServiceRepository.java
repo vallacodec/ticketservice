@@ -25,9 +25,9 @@ public class TicketServiceRepository {
 
     private SessionFactory sessionFactory;
 
-    private static String QUERY_WITH_LEVEL_ID = "from Seat where levelId = :levelId and status = 2";
+    private static String QUERY_WITH_LEVEL_ID = "from Seat where levelId = :levelId and seatStatus = 2";
 
-    private static String QUERY_WITHOUT_LEVEL_ID = "from Seat where status = 2";
+    private static String QUERY_WITHOUT_LEVEL_ID = "from Seat where seatStatus = 2";
 
     private static String UPDATE_HOLD_ID = "update Seat set seatStatus = :seatStatus, seatHoldId =:seatHoldId  where seatNo = :seatNo";
 
@@ -35,53 +35,55 @@ public class TicketServiceRepository {
 
     private static String DELETE_SEAT_HOLD_DATA = "Delete SeatHold where seatHoldId =:seatHoldId";
 
-
-    /**
-     * TicketServiceRepository
-     *
-     * @param sessionFactory SessionFactory
-     */
     @Autowired
-    public TicketServiceRepository(@Qualifier("sessionFactory") SessionFactory sessionFactory) {
+    public TicketServiceRepository(@Qualifier("sessionFactory")SessionFactory sessionFactory){
         this.sessionFactory = sessionFactory;
     }
+
 
     @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.DEFAULT)
     public Integer insertSeatHoldData(SeatHold seatHold) {
         com.tm.persistence.SeatHold seatHoldPersistence = new com.tm.persistence.SeatHold();
         seatHoldPersistence.setCustomerEmailId(seatHold.getCustomerEmailId());
         seatHoldPersistence.setSeatHoldTime(new Date());
-        Session session = sessionFactory.getCurrentSession();
+        Session session = sessionFactory.openSession();
         session.save(seatHoldPersistence);
-        return seatHoldPersistence.getSeatHoldId();
+        int seatHoldId = seatHoldPersistence.getSeatHoldId();
+        session.close();
+        return seatHoldId;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.DEFAULT)
     public void updateSeatDetailsForHold(Seat seat, Integer seatHoldId) {
-        Session session = sessionFactory.getCurrentSession();
+        Session session = sessionFactory.openSession();
         Query query = session.createQuery(UPDATE_HOLD_ID);
         query.setInteger("seatNo", seat.getSeatNo());
         query.setInteger("seatHoldId", seatHoldId);
         query.setInteger("seatStatus", SeatStatus.HOLD.getStatusId());
         query.executeUpdate();
+        session.close();
     }
 
 
     @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.DEFAULT)
-    public void updateSeatForAvailable(Integer seatHoldId) {
-        Session session = sessionFactory.getCurrentSession();
+    public Integer updateSeatForAvailable(Integer seatHoldId) {
+        Session session = sessionFactory.openSession();
         Query query = session.createQuery(UPDATE_SEAT_DATA);
         query.setInteger("seatHoldId", seatHoldId);
         query.setInteger("seatStatus", SeatStatus.AVAILABLE.getStatusId());
-        query.executeUpdate();
+        int updated = query.executeUpdate();
+        session.close();
+        return updated;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.DEFAULT)
-    public void deleteSeatHold(Integer seatHoldId) {
-        Session session = sessionFactory.getCurrentSession();
+    public int deleteSeatHold(Integer seatHoldId) {
+        Session session = sessionFactory.openSession();
         Query query = session.createQuery(DELETE_SEAT_HOLD_DATA);
         query.setInteger("seatHoldId", seatHoldId);
-        query.executeUpdate();
+        int deleteCount = query.executeUpdate();
+        session.close();
+        return deleteCount;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.DEFAULT)
@@ -90,11 +92,13 @@ public class TicketServiceRepository {
         Query query = null;
         if (levelId.isPresent()) {
             query = session.createQuery(QUERY_WITH_LEVEL_ID);
+            query.setParameter("levelId", levelId.get());
         } else {
             query = session.createQuery(QUERY_WITHOUT_LEVEL_ID);
         }
-        query.setParameter("levelId", levelId.get());
+
         List<com.tm.persistence.Seat> results = query.list();
+        session.close();
         return results;
     }
 

@@ -18,8 +18,8 @@ public class Level {
     @Id
     private Integer levelId;
 
-    private Integer noOfSeats;
+    private String levelName;
 
-    private String levelStatus;
+    private Integer noOfSeats;
 
 }

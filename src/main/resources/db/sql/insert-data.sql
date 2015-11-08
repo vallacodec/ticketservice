@@ -1,3 +1,4 @@
-INSERT INTO users VALUES (1, 'mkyong', 'mkyong@gmail.com');
-INSERT INTO users VALUES (2, 'alex', 'alex@yahoo.com');
-INSERT INTO users VALUES (3, 'joel', 'joel@gmail.com');
+INSERT INTO LEVEL(LEVEL_ID,LEVEL_NAME,NO_OF_SEATS)
+VALUES (1,'BALCONY1', 25);
+INSERT INTO SEAT(SEAT_NO,CUSTOMER_EMAIL_ID,LEVEL_ID,SEAT_HOLD_ID,SEAT_STATUS)
+VALUES (1,'', 1,-1,2);

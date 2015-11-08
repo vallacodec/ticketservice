@@ -12,6 +12,8 @@ import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -21,6 +23,8 @@ import java.util.Optional;
 /**
  * Created by svallaban1 on 11/3/2015.
  */
+@Service
+@EnableTransactionManagement
 public class TicketServiceImpl implements TicketService {
 
     private TicketRepository ticketRepository;
