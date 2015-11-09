@@ -1,20 +1,15 @@
 package com.tm.service.impl;
 
-import com.tm.model.Level;
 import com.tm.model.LevelEnum;
 import com.tm.model.SeatHold;
 import com.tm.model.SeatStatus;
 import com.tm.persistence.Seat;
-import com.tm.repository.LevelRepository;
-import com.tm.repository.TicketRepository;
 import com.tm.repository.TicketServiceRepository;
 import com.tm.service.TicketService;
-import org.hibernate.Query;
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
@@ -32,6 +27,7 @@ public class TicketServiceImpl implements TicketService {
 
     private static final Logger log = LoggerFactory.getLogger(TicketServiceImpl.class);
 
+
     private TicketServiceRepository ticketServiceRepository;
 
     //Seat hold time is 2 minutes
@@ -43,7 +39,10 @@ public class TicketServiceImpl implements TicketService {
 
     public static final String NO_RECORD_FOUND = "No Record Found";
 
-
+    @Autowired
+    public TicketServiceImpl(@Qualifier("ticketServiceRepository")TicketServiceRepository ticketServiceRepository){
+        this.ticketServiceRepository = ticketServiceRepository;
+    }
     /**
      * venueLevel 4-Orchestra 3-Main 2-Balcony1 1-Balcony2
      *

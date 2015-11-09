@@ -28,7 +28,7 @@ public class TicketServiceImplTest {
 
     @Before
     public void setUp() throws Exception {
-        ticketService = new TicketServiceImpl();
+        ticketService = new TicketServiceImpl(ticketServiceRepository);
         MockitoAnnotations.initMocks(this);
 
     }

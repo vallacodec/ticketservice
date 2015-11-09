@@ -21,7 +21,11 @@ public class DataBaseConfig {
         EmbeddedDatabase db = builder
                 .setType(EmbeddedDatabaseType.H2)
                 .addScript("db/sql/create-db.sql")
-                .addScript("db/sql/insert-data.sql")
+                .addScript("db/sql/insert-level.sql")
+                .addScript("db/sql/insert-seat-balcony1.sql")
+                .addScript("db/sql/insert-seat-balcony2.sql")
+                .addScript("db/sql/insert-seat-main.sql")
+                .addScript("db/sql/insert-seat-orchestra.sql")
                 .build();
         return db;
     }
