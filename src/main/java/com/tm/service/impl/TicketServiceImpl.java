@@ -12,6 +12,8 @@ import com.tm.service.TicketService;
 import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
@@ -28,17 +30,23 @@ import java.util.Optional;
 @EnableTransactionManagement
 public class TicketServiceImpl implements TicketService {
 
+    private static final Logger log = LoggerFactory.getLogger(TicketServiceImpl.class);
 
     private TicketServiceRepository ticketServiceRepository;
 
+    //Seat hold time is 2 minutes
     private static final int HOLD_TIME = 2 * 60 * 1000;
 
-    private static final String SUCCESS = "SUCCESS";
+    public static final String SUCCESS = "SUCCESS";
 
-    private static final String HOLD_TIME_OUT = "hold time out";
+    public static final String HOLD_TIME_OUT = "hold time out";
+
+    public static final String NO_RECORD_FOUND = "No Record Found";
 
 
     /**
+     * venueLevel 4-Orchestra 3-Main 2-Balcony1 1-Balcony2
+     *
      * @param venueLevel a numeric venue level identifier to limit the search
      * @return
      */
@@ -48,9 +56,9 @@ public class TicketServiceImpl implements TicketService {
     }
 
     /**
-     * This method holds the seats for the customerEmail if available
+     * This method holds the seats for the customerEmail and no of seats
      * if seats are not available in the minLevel then the method looks in the other level to
-     * find the seat until maxLevel
+     * find the seat until maxLevel (please check seatAvailableLevel javadoc for more detail)
      * This method assumes the user wants all the seats to be in one level
      *
      * @param numSeats      the number of seats to find and hold
@@ -60,20 +68,27 @@ public class TicketServiceImpl implements TicketService {
      * @return
      */
     public SeatHold findAndHoldSeats(int numSeats, Optional<Integer> minLevel, Optional<Integer> maxLevel, String customerEmail) {
-        Integer levelInteger = seatAvailableLevel(numSeats, minLevel, maxLevel);
-        List<Seat> seats = ticketServiceRepository.getSeatDetails(Optional.of(levelInteger));
-        List<com.tm.model.Seat> seatHolds = new ArrayList<>();
-        //hold seats
-        SeatHold seatHold = new SeatHold();
-        seatHold.setSeatHoldTime(new Date());
-        int seatHoldId = ticketServiceRepository.insertSeatHoldData(seatHold);
-        for (int i = 0; i < numSeats; i++) {
-            com.tm.model.Seat seat = seatHold.holdSeat(seats.get(i));
-            ticketServiceRepository.updateSeatDetailsForHold(seat, seatHoldId);
-            seatHolds.add(seat);
+        SeatHold seatHold = null;
+        if (numSeats < 0 || customerEmail == null) {
+            log.error("number of seats and customer email id are mandatory to hold the seats");
+            return null;
         }
-        seatHold.setSeatHoldId(seatHoldId);
-        seatHold.setSeats(seatHolds);
+        Integer levelInteger = seatAvailableLevel(numSeats, minLevel, maxLevel);
+        if (levelInteger > 0) {
+            List<Seat> seats = ticketServiceRepository.getSeatDetails(Optional.of(levelInteger));
+            List<com.tm.model.Seat> seatHolds = new ArrayList<>();
+            //hold seats
+            seatHold = new SeatHold();
+            seatHold.setSeatHoldTime(new Date());
+            int seatHoldId = ticketServiceRepository.insertSeatHoldData(seatHold);
+            for (int i = 0; i < numSeats; i++) {
+                com.tm.model.Seat seat = seatHold.holdSeat(seats.get(i));
+                ticketServiceRepository.updateSeatDetailsForHold(seat, seatHoldId);
+                seatHolds.add(seat);
+            }
+            seatHold.setSeatHoldId(seatHoldId);
+            seatHold.setSeats(seatHolds);
+        }
         return seatHold;
     }
 
@@ -84,23 +99,29 @@ public class TicketServiceImpl implements TicketService {
      * @return
      */
     public String reserveSeats(int seatHoldId, String customerEmail) {
-        String reserved = "";
+        String reserved = NO_RECORD_FOUND;
         Date date = ticketServiceRepository.getSeatHoldTime(seatHoldId);
-        if (date.getTime() > HOLD_TIME) {
-            ticketServiceRepository.deleteSeatHold(seatHoldId);
-            ticketServiceRepository.updateSeatForAvailableOrReserved(seatHoldId, SeatStatus.AVAILABLE);
-            reserved = HOLD_TIME_OUT;
-        } else {
-            ticketServiceRepository.updateSeatForAvailableOrReserved(seatHoldId, SeatStatus.RESERVED);
-            ticketServiceRepository.deleteSeatHold(seatHoldId);
-            reserved = SUCCESS;
+        Date now = new Date();
+        if (date != null) {
+            if (now.getTime() - date.getTime() > HOLD_TIME) {
+                ticketServiceRepository.deleteSeatHold(seatHoldId);
+                ticketServiceRepository.updateSeatForAvailableOrReserved(seatHoldId, SeatStatus.AVAILABLE);
+                reserved = HOLD_TIME_OUT;
+            } else {
+                ticketServiceRepository.updateSeatForAvailableOrReserved(seatHoldId, SeatStatus.RESERVED);
+                ticketServiceRepository.deleteSeatHold(seatHoldId);
+                reserved = SUCCESS;
+            }
         }
         return reserved;
     }
 
     /**
-     * If minimum level is not present, it assumes to be 1
-     * if maximum level is not present then this method assumes the minLevel is maxLevel
+     * This method always return the lowest possible level unless the min level or max level are present
+     * If minimum level is not present and max level is present, the the method finds the seats
+     * with the lowest level which is balcony1
+     * if maximum level is not present then this method starts the seats search from the minLevel
+     * until the orchestra
      * This method returns the first available level for the no of seats
      *
      * @param numSeats
@@ -109,13 +130,15 @@ public class TicketServiceImpl implements TicketService {
      * @return
      */
     private int seatAvailableLevel(int numSeats, Optional<Integer> minLevel, Optional<Integer> maxLevel) {
-        int availableLevel = 0;
+        int availableLevel = -1;
         if (minLevel.isPresent() && maxLevel.isPresent()) {
             availableLevel = findLevelAvailable(numSeats, minLevel.get(), maxLevel.get());
         } else if (minLevel.isPresent()) {
-            availableLevel = findLevelAvailable(numSeats, 1, minLevel.get());
+            availableLevel = findLevelAvailable(numSeats, minLevel.get(), LevelEnum.ORCHESTRA.getLevel());
         } else if (maxLevel.isPresent()) {
-            availableLevel = findLevelAvailable(numSeats, 1, maxLevel.get());
+            availableLevel = findLevelAvailable(numSeats, LevelEnum.BALCONY2.getLevel(), maxLevel.get());
+        } else {
+            availableLevel = findLevelAvailable(numSeats, LevelEnum.BALCONY2.getLevel(), LevelEnum.ORCHESTRA.getLevel());
         }
         return availableLevel;
     }
@@ -129,10 +152,10 @@ public class TicketServiceImpl implements TicketService {
      * @return
      */
     private int findLevelAvailable(int numSeats, int minValue, int maxValue) {
-        int availableLevel = 0;
-        for (int i = minValue; i < maxValue; i++) {
-            if (numSeats >= numSeatsAvailable(Optional.of(i))) {
-                availableLevel = availableLevel + 1;
+        int availableLevel = minValue - 1;
+        for (int i = minValue; i <= maxValue; i++) {
+            availableLevel = availableLevel + 1;
+            if (numSeatsAvailable(Optional.of(i)) >= numSeats) {
                 break;
             }
         }

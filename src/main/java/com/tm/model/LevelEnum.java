@@ -6,10 +6,10 @@ package com.tm.model;
  */
 public enum LevelEnum {
 
-    ORCHESTRA(1),
-    MAIN(2),
-    BALCONY1(3),
-    BALCONY2(4);
+    ORCHESTRA(4),
+    MAIN(3),
+    BALCONY1(2),
+    BALCONY2(1);
 
     private Integer levelId;
 
@@ -17,7 +17,7 @@ public enum LevelEnum {
         this.levelId = levelId;
     }
 
-    public int getSeat() {
+    public int getLevel() {
         return this.levelId;
     }
 
