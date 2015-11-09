@@ -3,6 +3,7 @@ package com.tm.repository;
 import com.tm.model.Seat;
 import com.tm.model.SeatHold;
 import com.tm.model.SeatStatus;
+import com.tm.service.impl.TicketServiceImpl;
 import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
@@ -13,10 +14,7 @@ import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * Created by indsara on 11/7/15.
@@ -37,6 +35,8 @@ public class TicketServiceRepository {
     private static String DELETE_SEAT_HOLD_DATA = "Delete SeatHold where seatHoldId =:seatHoldId";
 
     private static String GET_SEAT_HOLD_TIME = "from SeatHold where seatHoldId =:seatHoldId";
+
+    private static String EXPIRED_SEAT_HOLD = "select distinct(seatHoldId) from SeatHold where seatHoldTime >:expireHoldTime";
 
     @Autowired
     public TicketServiceRepository(@Qualifier("sessionFactory") SessionFactory sessionFactory) {
@@ -152,6 +152,21 @@ public class TicketServiceRepository {
         Query query = session.createQuery(GET_SEAT_HOLD_TIME);
         List<com.tm.persistence.SeatHold> results = query.list();
         return results.get(0).getSeatHoldTime();
+    }
+
+    /**
+     * This method returns the expired hold in the seat_hold table
+     * @return List Exprired Hold
+     */
+    public List<String> findExpiredHold() {
+        List<String> expiredHolds = null;
+        Calendar expireHoldTime = Calendar.getInstance();
+        expireHoldTime.add(Calendar.MINUTE, -TicketServiceImpl.HOLD_TIME);
+        Session session = sessionFactory.openSession();
+        Query query = session.createQuery(EXPIRED_SEAT_HOLD);
+        query.setParameter("expireHoldTime", expireHoldTime.getTime());
+        expiredHolds = query.list();
+        return expiredHolds;
     }
 
 }

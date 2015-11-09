@@ -5,6 +5,7 @@ import com.tm.config.RepositoryConfiguration;
 import com.tm.model.Seat;
 import com.tm.model.SeatHold;
 import com.tm.model.SeatStatus;
+import com.tm.service.impl.TicketServiceImpl;
 import org.hibernate.SessionFactory;
 import org.junit.After;
 import org.junit.Assert;
@@ -20,10 +21,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import javax.sql.DataSource;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * Created by svallaban1 on 11/6/2015.
@@ -119,4 +117,24 @@ public class TicketServiceRepositoryTest {
     public void testGetSeatDetails() throws Exception {
         ticketServiceRepository.getSeatDetails(Optional.of(1));
     }
+
+
+    @Test
+    public void testFindExpiredHold() throws Exception {
+        SeatHold seatHold = new SeatHold();
+        seatHold.setSeatHoldId(1);
+        seatHold.setSeatHoldTime(new Date());
+        seatHold.setCustomerEmailId("test@gmail.com");
+        ticketServiceRepository.insertSeatHoldData(seatHold);
+        seatHold.setSeatHoldId(2);
+        Calendar expireHoldTime = Calendar.getInstance();
+        expireHoldTime.add(Calendar.MINUTE, -TicketServiceImpl.HOLD_TIME);
+        seatHold.setSeatHoldTime(expireHoldTime.getTime());
+        seatHold.setCustomerEmailId("expired@gmail.com");
+        ticketServiceRepository.insertSeatHoldData(seatHold);
+
+        Assert.assertEquals("testFindExpiredHold",2,ticketServiceRepository.findExpiredHold().get(0));
+    }
+
+
 }

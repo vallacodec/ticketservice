@@ -31,7 +31,7 @@ public class TicketServiceImpl implements TicketService {
     private TicketServiceRepository ticketServiceRepository;
 
     //Seat hold time is 2 minutes
-    private static final int HOLD_TIME = 2 * 60 * 1000;
+    public static final int HOLD_TIME = 2 * 60 * 1000;
 
     public static final String SUCCESS = "SUCCESS";
 
