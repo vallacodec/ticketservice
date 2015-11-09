@@ -197,7 +197,6 @@ public class TicketServiceImplTest {
     @Test
     public void testReserveSeatsIfHoldTimeLessThanMaxHoldTime() throws Exception {
         Calendar now = Calendar.getInstance();
-        now.add(Calendar.MINUTE, -1);
         when(ticketServiceRepository.getSeatHoldTime(1)).thenReturn(now.getTime());
         Assert.assertEquals("Record not found test case failed", TicketServiceImpl.SUCCESS, ticketService.reserveSeats(1, "test@gmail.com"));
     }
@@ -205,7 +204,7 @@ public class TicketServiceImplTest {
     @Test
     public void testReserveSeatsIfHoldTimeGreaterThanMaxHoldTime() throws Exception {
         Calendar now = Calendar.getInstance();
-        now.add(Calendar.MINUTE, -3);
+        now.add(Calendar.MINUTE, -(TicketServiceImpl.HOLD_TIME+1));
         when(ticketServiceRepository.getSeatHoldTime(1)).thenReturn(now.getTime());
         Assert.assertEquals("Record not found test case failed", TicketServiceImpl.HOLD_TIME_OUT, ticketService.reserveSeats(1, "test@gmail.com"));
     }

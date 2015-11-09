@@ -4,9 +4,12 @@ import com.tm.model.Seat;
 import com.tm.model.SeatHold;
 import com.tm.model.SeatStatus;
 import com.tm.service.impl.TicketServiceImpl;
+import com.tm.util.TicketServiceUtil;
 import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Repository;
@@ -14,13 +17,19 @@ import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.Timestamp;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
- * Created by indsara on 11/7/15.
+ * Created by svallaban1 on 11/9/2015.
  */
 @Repository
 public class TicketServiceRepository {
+
+    private static final Logger log = LoggerFactory.getLogger(TicketServiceRepository.class);
 
     private SessionFactory sessionFactory;
 
@@ -28,15 +37,15 @@ public class TicketServiceRepository {
 
     private static String QUERY_WITHOUT_LEVEL_ID = "from Seat where seatStatus = 2";
 
-    private static String UPDATE_HOLD_ID = "update Seat set seatStatus = :seatStatus, seatHoldId =:seatHoldId  where seatNo = :seatNo";
+    private static String UPDATE_HOLD_ID = "update Seat set seatStatus = :seatStatus, seatHoldId =:seatHoldId,customerEmailId =:customerEmailId  where seatNo = :seatNo";
 
-    private static String UPDATE_SEAT_DATA = "update Seat set seatStatus = :seatStatus where seatHoldId =:seatHoldId";
+    private static String UPDATE_SEAT_DATA = "update Seat set seatStatus = :seatStatus,seatHoldId = -1 where seatHoldId =:seatHoldId";
 
     private static String DELETE_SEAT_HOLD_DATA = "Delete SeatHold where seatHoldId =:seatHoldId";
 
     private static String GET_SEAT_HOLD_TIME = "from SeatHold where seatHoldId =:seatHoldId";
 
-    private static String EXPIRED_SEAT_HOLD = "select distinct(seatHoldId) from SeatHold where seatHoldTime >:expireHoldTime";
+    private static String EXPIRED_SEAT_HOLD = "select distinct(seatHoldId) from SeatHold where seatHoldTime <:expireHoldTime";
 
     @Autowired
     public TicketServiceRepository(@Qualifier("sessionFactory") SessionFactory sessionFactory) {
@@ -50,10 +59,14 @@ public class TicketServiceRepository {
      * @return
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.DEFAULT)
-    public Integer insertSeatHoldData(SeatHold seatHold) {
+    public Integer insertSeatHoldData(SeatHold seatHold, Optional<Date> date) {
         com.tm.persistence.SeatHold seatHoldPersistence = new com.tm.persistence.SeatHold();
         seatHoldPersistence.setCustomerEmailId(seatHold.getCustomerEmailId());
-        seatHoldPersistence.setSeatHoldTime(new Date());
+        if (date.isPresent()) {
+            seatHoldPersistence.setSeatHoldTime(date.get());
+        } else {
+            seatHoldPersistence.setSeatHoldTime(new Date());
+        }
         Session session = sessionFactory.openSession();
         session.save(seatHoldPersistence);
         int seatHoldId = seatHoldPersistence.getSeatHoldId();
@@ -74,6 +87,7 @@ public class TicketServiceRepository {
         query.setInteger("seatNo", seat.getSeatNo());
         query.setInteger("seatHoldId", seatHoldId);
         query.setInteger("seatStatus", SeatStatus.HOLD.getStatusId());
+        query.setString("customerEmailId",seat.getEmailId());
         query.executeUpdate();
         session.close();
     }
@@ -132,9 +146,7 @@ public class TicketServiceRepository {
         } else {
             query = session.createQuery(QUERY_WITHOUT_LEVEL_ID);
         }
-
         List<com.tm.persistence.Seat> results = query.list();
-        List<Seat> seats = new ArrayList<>();
         session.close();
         return results;
     }
@@ -147,9 +159,9 @@ public class TicketServiceRepository {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.DEFAULT)
     public Date getSeatHoldTime(int seatHoldId) {
-        Date seatHoldTime = null;
         Session session = sessionFactory.openSession();
         Query query = session.createQuery(GET_SEAT_HOLD_TIME);
+        query.setInteger("seatHoldId",seatHoldId);
         List<com.tm.persistence.SeatHold> results = query.list();
         return results.get(0).getSeatHoldTime();
     }
@@ -158,13 +170,12 @@ public class TicketServiceRepository {
      * This method returns the expired hold in the seat_hold table
      * @return List Exprired Hold
      */
-    public List<String> findExpiredHold() {
-        List<String> expiredHolds = null;
-        Calendar expireHoldTime = Calendar.getInstance();
-        expireHoldTime.add(Calendar.MINUTE, -TicketServiceImpl.HOLD_TIME);
+    public List<Integer> findExpiredHold() {
+        List<Integer> expiredHolds = null;
+        Date expireHoldTime =TicketServiceUtil.addMinutesToDate(-TicketServiceImpl.HOLD_TIME, new Date());
         Session session = sessionFactory.openSession();
         Query query = session.createQuery(EXPIRED_SEAT_HOLD);
-        query.setParameter("expireHoldTime", expireHoldTime.getTime());
+        query.setParameter("expireHoldTime",expireHoldTime);
         expiredHolds = query.list();
         return expiredHolds;
     }

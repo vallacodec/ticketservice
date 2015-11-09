@@ -31,7 +31,9 @@ public class TicketServiceImpl implements TicketService {
     private TicketServiceRepository ticketServiceRepository;
 
     //Seat hold time is 2 minutes
-    public static final int HOLD_TIME = 2 * 60 * 1000;
+    public static final int HOLD_TIME = 10;
+
+    public static final int HOLD_TIME_MILLIS = 10 * 60 * 1000;
 
     public static final String SUCCESS = "SUCCESS";
 
@@ -40,9 +42,10 @@ public class TicketServiceImpl implements TicketService {
     public static final String NO_RECORD_FOUND = "No Record Found";
 
     @Autowired
-    public TicketServiceImpl(@Qualifier("ticketServiceRepository")TicketServiceRepository ticketServiceRepository){
+    public TicketServiceImpl(@Qualifier("ticketServiceRepository") TicketServiceRepository ticketServiceRepository) {
         this.ticketServiceRepository = ticketServiceRepository;
     }
+
     /**
      * venueLevel 4-Orchestra 3-Main 2-Balcony1 1-Balcony2
      *
@@ -50,6 +53,7 @@ public class TicketServiceImpl implements TicketService {
      * @return
      */
     public int numSeatsAvailable(Optional<Integer> venueLevel) {
+        clearExpiredHold();
         List<Seat> seats = ticketServiceRepository.getSeatDetails(venueLevel);
         return seats.size();
     }
@@ -72,6 +76,7 @@ public class TicketServiceImpl implements TicketService {
             log.error("number of seats and customer email id are mandatory to hold the seats");
             return null;
         }
+        clearExpiredHold();
         Integer levelInteger = seatAvailableLevel(numSeats, minLevel, maxLevel);
         if (levelInteger > 0) {
             List<Seat> seats = ticketServiceRepository.getSeatDetails(Optional.of(levelInteger));
@@ -79,7 +84,7 @@ public class TicketServiceImpl implements TicketService {
             //hold seats
             seatHold = new SeatHold();
             seatHold.setSeatHoldTime(new Date());
-            int seatHoldId = ticketServiceRepository.insertSeatHoldData(seatHold);
+            int seatHoldId = ticketServiceRepository.insertSeatHoldData(seatHold, Optional.<Date>empty());
             for (int i = 0; i < numSeats; i++) {
                 com.tm.model.Seat seat = seatHold.holdSeat(seats.get(i));
                 ticketServiceRepository.updateSeatDetailsForHold(seat, seatHoldId);
@@ -102,7 +107,7 @@ public class TicketServiceImpl implements TicketService {
         Date date = ticketServiceRepository.getSeatHoldTime(seatHoldId);
         Date now = new Date();
         if (date != null) {
-            if (now.getTime() - date.getTime() > HOLD_TIME) {
+            if (now.getTime() - date.getTime() > HOLD_TIME_MILLIS) {
                 ticketServiceRepository.deleteSeatHold(seatHoldId);
                 ticketServiceRepository.updateSeatForAvailableOrReserved(seatHoldId, SeatStatus.AVAILABLE);
                 reserved = HOLD_TIME_OUT;
@@ -159,5 +164,17 @@ public class TicketServiceImpl implements TicketService {
             }
         }
         return availableLevel;
+    }
+
+    /**
+     * This method clears the expired hold in the database
+     */
+    private void clearExpiredHold() {
+        List<Integer> expiredHoldIds = ticketServiceRepository.findExpiredHold();
+        for (Integer expiredHoldId : expiredHoldIds) {
+            ticketServiceRepository.updateSeatForAvailableOrReserved(expiredHoldId, SeatStatus.AVAILABLE);
+            ticketServiceRepository.deleteSeatHold(expiredHoldId);
+        }
+
     }
 }

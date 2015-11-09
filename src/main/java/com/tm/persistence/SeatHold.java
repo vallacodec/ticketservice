@@ -23,4 +23,5 @@ public class SeatHold {
 
     private String customerEmailId;
 
+
 }

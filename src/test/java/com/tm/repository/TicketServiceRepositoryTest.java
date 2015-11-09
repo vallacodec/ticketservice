@@ -6,6 +6,7 @@ import com.tm.model.Seat;
 import com.tm.model.SeatHold;
 import com.tm.model.SeatStatus;
 import com.tm.service.impl.TicketServiceImpl;
+import com.tm.util.TicketServiceUtil;
 import org.hibernate.SessionFactory;
 import org.junit.After;
 import org.junit.Assert;
@@ -68,7 +69,7 @@ public class TicketServiceRepositoryTest {
         seatHold.setSeatHoldTime(seatHoldTime);
         seatHold.setCustomerEmailId("test@gmail.com");
 
-        int seatHoldId = ticketServiceRepository.insertSeatHoldData(seatHold);
+        int seatHoldId = ticketServiceRepository.insertSeatHoldData(seatHold, Optional.<Date>empty());
         Assert.assertNotNull("seatHoldId is not null", seatHoldId);
     }
 
@@ -106,7 +107,7 @@ public class TicketServiceRepositoryTest {
         seatHold.setSeatHoldTime(seatHoldTime);
         seatHold.setCustomerEmailId("test@gmail.com");
 
-        int seatHoldId = ticketServiceRepository.insertSeatHoldData(seatHold);
+        int seatHoldId = ticketServiceRepository.insertSeatHoldData(seatHold, Optional.<Date>empty());
 
         int count = ticketServiceRepository.deleteSeatHold(seatHoldId);
         Assert.assertEquals("deleted count ",count,1);
@@ -125,15 +126,18 @@ public class TicketServiceRepositoryTest {
         seatHold.setSeatHoldId(1);
         seatHold.setSeatHoldTime(new Date());
         seatHold.setCustomerEmailId("test@gmail.com");
-        ticketServiceRepository.insertSeatHoldData(seatHold);
+        ticketServiceRepository.insertSeatHoldData(seatHold, Optional.<Date>empty());
         seatHold.setSeatHoldId(2);
-        Calendar expireHoldTime = Calendar.getInstance();
-        expireHoldTime.add(Calendar.MINUTE, -TicketServiceImpl.HOLD_TIME);
-        seatHold.setSeatHoldTime(expireHoldTime.getTime());
+        Date expireHoldTime = TicketServiceUtil.addMinutesToDate(-11, new Date());
+        seatHold.setSeatHoldTime(expireHoldTime);
         seatHold.setCustomerEmailId("expired@gmail.com");
-        ticketServiceRepository.insertSeatHoldData(seatHold);
+        ticketServiceRepository.insertSeatHoldData(seatHold, Optional.of(expireHoldTime));
+        seatHold.setSeatHoldId(3);
+        seatHold.setSeatHoldTime(expireHoldTime);
+        seatHold.setCustomerEmailId("sample@gmail.com");
+        ticketServiceRepository.insertSeatHoldData(seatHold, Optional.of(expireHoldTime));
 
-        Assert.assertEquals("testFindExpiredHold",2,ticketServiceRepository.findExpiredHold().get(0));
+        Assert.assertEquals("testFindExpiredHold", 2, ticketServiceRepository.findExpiredHold().size());
     }
 
 
